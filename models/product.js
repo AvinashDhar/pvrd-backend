@@ -6,8 +6,7 @@ const productSchema = mongoose.Schema({
         required: true,
     },
     description: {
-        type: String,
-        required: true
+        type: String
     },
     richDescription: {
         type: String,
@@ -24,21 +23,15 @@ const productSchema = mongoose.Schema({
         type: String,
         default: ''
     },
-    price : {
-        type: Number,
-        default:0
-    },
     category: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Category',
         required:true
     },
-    countInStock: {
-        type: Number,
-        required: true,
-        min: 0,
-        max: 255
-    },
+    productVariants: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ProductVariant'
+    }],
     rating: {
         type: Number,
         default: 0,

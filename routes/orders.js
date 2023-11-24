@@ -1,16 +1,45 @@
 const {Order} = require('../models/order');
 const express = require('express');
 const { OrderItem } = require('../models/order-item');
+const { User } = require('../models/user');
 const router = express.Router();
 
 router.get(`/`, async (req, res) =>{
-    const orderList = await Order.find().populate('user', 'name').sort({'dateOrdered': -1});
+    const orderList = await Order.find().populate('user', 'name').populate('orderItems').sort({'dateOrdered': -1});
 
     if(!orderList) {
         res.status(500).json({success: false})
     } 
     res.send(orderList);
 })
+
+//get all the order items irrespective of the order or user
+router.get(`/orderItems`, async (req, res) =>{
+    const orderList = await OrderItem.find().sort({'dateOrdered': -1});
+
+    if(!orderList) {
+        res.status(500).json({success: false})
+    } 
+    res.send(orderList);
+})
+
+//update the order item status
+router.put('/orderItems/:id',async (req, res)=> {
+    const orderItem = await OrderItem.findByIdAndUpdate(
+        req.params.id,
+        {
+            status: req.body.status,
+            adminMessage:req.body.adminMessage,
+        },
+        { new: true}
+    )
+
+    if(!orderItem)
+    return res.status(400).send('the orderItem cannot be update!')
+
+    res.send(orderItem);
+})
+
 
 router.get(`/:id`, async (req, res) =>{
     const order = await Order.findById(req.params.id)
@@ -27,12 +56,15 @@ router.get(`/:id`, async (req, res) =>{
 })
 
 router.post('/', async (req,res)=>{
+    const user = await User.findById(req.body.user)
     const orderItemsIds = Promise.all(req.body.orderItems.map(async (orderItem) =>{
         let newOrderItem = new OrderItem({
             quantity: orderItem.quantity,
-            product: orderItem.product
+            product: orderItem.product,
+            productVariant: orderItem?.productVariant,
+            status:"initial",
+            adminMessage:"none",
         })
-
         newOrderItem = await newOrderItem.save();
 
         return newOrderItem._id;
@@ -40,8 +72,10 @@ router.post('/', async (req,res)=>{
     const orderItemsIdsResolved =  await orderItemsIds;
 
     const totalPrices = await Promise.all(orderItemsIdsResolved.map(async (orderItemId)=>{
-        const orderItem = await OrderItem.findById(orderItemId).populate('product', 'price');
-        const totalPrice = orderItem.product.price * orderItem.quantity;
+        const orderItem = await OrderItem.findById(orderItemId).populate('product', 'price').populate('productVariant', 'price');
+        console.log("orderItem: ",orderItem)
+        
+        const totalPrice = orderItem.productVariant.price * orderItem.quantity;
         return totalPrice
     }))
 
@@ -49,15 +83,11 @@ router.post('/', async (req,res)=>{
 
     let order = new Order({
         orderItems: orderItemsIdsResolved,
-        shippingAddress1: req.body.shippingAddress1,
-        shippingAddress2: req.body.shippingAddress2,
-        city: req.body.city,
-        zip: req.body.zip,
-        country: req.body.country,
-        phone: req.body.phone,
         status: req.body.status,
+        adminMessage:req.body.adminMessage,
         totalPrice: totalPrice,
-        user: req.body.user,
+        user: user,
+        shippingAddress: req.body.shippingAddress
     })
     order = await order.save();
 
@@ -72,7 +102,8 @@ router.put('/:id',async (req, res)=> {
     const order = await Order.findByIdAndUpdate(
         req.params.id,
         {
-            status: req.body.status
+            status: req.body.status,
+            adminMessage:req.body.adminMessage,
         },
         { new: true}
     )
@@ -125,7 +156,7 @@ router.get(`/get/count`, async (req, res) =>{
 router.get(`/get/userorders/:userid`, async (req, res) =>{
     const userOrderList = await Order.find({user: req.params.userid}).populate({ 
         path: 'orderItems', populate: {
-            path : 'product', populate: 'category'} 
+            path : 'product', populate: 'productVariants'} 
         }).sort({'dateOrdered': -1});
 
     if(!userOrderList) {
@@ -136,4 +167,4 @@ router.get(`/get/userorders/:userid`, async (req, res) =>{
 
 
 
-module.exports =router;
+module.exports = router;

@@ -6,33 +6,15 @@ const orderSchema = mongoose.Schema({
         ref: 'OrderItem',
         required:true
     }],
-    shippingAddress1: {
-        type: String,
-        required: true,
-    },
-    shippingAddress2: {
-        type: String,
-    },
-    city: {
-        type: String,
-        required: true,
-    },
-    zip: {
-        type: String,
-        required: true,
-    },
-    country: {
-        type: String,
-        required: true,
-    },
-    phone: {
-        type: String,
-        required: true,
-    },
     status: {
         type: String,
         required: true,
         default: 'Pending',
+    },
+    adminMessage: {
+        type: String,
+        required: true,
+        default: 'None',
     },
     totalPrice: {
         type: Number,
@@ -41,6 +23,7 @@ const orderSchema = mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
     },
+    shippingAddress:{ type : Object , "default" : {} },
     dateOrdered: {
         type: Date,
         default: Date.now,

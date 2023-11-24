@@ -13,35 +13,15 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    phone: {
-        type: String,
-        required: true,
-    },
     isAdmin: {
         type: Boolean,
         default: false,
     },
-    street: {
-        type: String,
-        default: ''
+    isActive: {
+        type: Boolean,
+        default: false,
     },
-    apartment: {
-        type: String,
-        default: ''
-    },
-    zip :{
-        type: String,
-        default: ''
-    },
-    city: {
-        type: String,
-        default: ''
-    },
-    country: {
-        type: String,
-        default: ''
-    }
-
+    addresses: { type : Array , "default" : [] },
 });
 
 userSchema.virtual('id').get(function () {

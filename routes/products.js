@@ -4,6 +4,9 @@ const { Category } = require('../models/category');
 const router = express.Router();
 const mongoose = require('mongoose');
 const multer = require('multer');
+const aws = require("aws-sdk");
+const multerS3 = require("multer-s3");
+const { ProductVariant } = require('../models/productVariant');
 
 const FILE_TYPE_MAP = {
     'image/png': 'png',
@@ -11,25 +14,31 @@ const FILE_TYPE_MAP = {
     'image/jpg': 'jpg'
 }
 
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        const isValid = FILE_TYPE_MAP[file.mimetype];
-        let uploadError = new Error('invalid image type');
+const s3 = new aws.S3({
+    accessKeyId: process.env.S3_ACCESS_KEY,
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+    region: process.env.S3_BUCKET_REGION,
+});
 
-        if(isValid) {
-            uploadError = null
-        }
-      cb(uploadError, 'public/uploads')
-    },
-    filename: function (req, file, cb) {
+const uploadOptions = (bucketName) =>
+    multer({
+      storage: multerS3({
+        s3,
+        bucket: bucketName,
+        metadata: function (req, file, cb) {
+          cb(null, { fieldName: file.fieldname });
+        },
+        key: function (req, file, cb) {
+          cb(null, `image-${Date.now()}.jpeg`);
+        },
+        filename: function (req, file, cb) {
         
-      const fileName = file.originalname.split(' ').join('-');
-      const extension = FILE_TYPE_MAP[file.mimetype];
-      cb(null, `${fileName}-${Date.now()}.${extension}`)
-    }
-  })
-  
-const uploadOptions = multer({ storage: storage })
+            const fileName = file.originalname.split(' ').join('-');
+            const extension = FILE_TYPE_MAP[file.mimetype];
+            cb(null, `${fileName}-${Date.now()}.${extension}`)
+          }
+      }),
+});
 
 router.get(`/`, async (req, res) =>{
     let filter = {};
@@ -38,7 +47,7 @@ router.get(`/`, async (req, res) =>{
          filter = {category: req.query.categories.split(',')}
     }
 
-    const productList = await Product.find(filter).populate('category');
+    const productList = await Product.find(filter).populate('category').populate('productVariants');
 
     if(!productList) {
         res.status(500).json({success: false})
@@ -55,24 +64,38 @@ router.get(`/:id`, async (req, res) =>{
     res.send(product);
 })
 
-router.post(`/`, uploadOptions.single('image'), async (req, res) =>{
+router.post(`/`, uploadOptions("pvrd-products").single('image'), async (req, res) =>{
     const category = await Category.findById(req.body.category);
     if(!category) return res.status(400).send('Invalid Category')
 
     const file = req.file;
-    if(!file) return res.status(400).send('No image in the request')
+    if(!file) return res.status(400).send('No image in the request');
 
-    const fileName = file.filename
-    const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`;
+    //product variants creation:
+    const productVariantIds = Promise.all(JSON.parse(req.body.productVariants)?.map(async (productVariant) =>{
+        let newProductVariant = new ProductVariant({
+            description: productVariant.description,
+            size: productVariant.size,
+            colour: productVariant.colour,
+            price: productVariant.price,
+            countInStock: productVariant.countInStock,
+            isFeatured: productVariant.isFeatured,
+        })
+
+        newProductVariant = await newProductVariant.save();
+
+        return newProductVariant._id;
+    }))
+    const productVariantIdsResolved =  await productVariantIds;
+
     let product = new Product({
         name: req.body.name,
         description: req.body.description,
         richDescription: req.body.richDescription,
-        image: `${basePath}${fileName}`,// "http://localhost:3000/public/upload/image-2323232"
+        image: req.file.location,
         brand: req.body.brand,
-        price: req.body.price,
         category: req.body.category,
-        countInStock: req.body.countInStock,
+        productVariants: productVariantIdsResolved,
         rating: req.body.rating,
         numReviews: req.body.numReviews,
         isFeatured: req.body.isFeatured,
@@ -91,7 +114,7 @@ router.put('/:id',async (req, res)=> {
        return res.status(400).send('Invalid Product Id')
     }
     const category = await Category.findById(req.body.category);
-    if(!category) return res.status(400).send('Invalid Category')
+    if(!category) return res.status(400).send('Invalid Category');
 
     const product = await Product.findByIdAndUpdate(
         req.params.id,
@@ -101,9 +124,8 @@ router.put('/:id',async (req, res)=> {
             richDescription: req.body.richDescription,
             image: req.body.image,
             brand: req.body.brand,
-            price: req.body.price,
             category: req.body.category,
-            countInStock: req.body.countInStock,
+            productVariant: req.body.productVariant,
             rating: req.body.rating,
             numReviews: req.body.numReviews,
             isFeatured: req.body.isFeatured,
@@ -115,6 +137,31 @@ router.put('/:id',async (req, res)=> {
     return res.status(500).send('the product cannot be updated!')
 
     res.send(product);
+})
+
+router.put('/productVariants/:productVariantId',async (req, res)=> {
+    if(!mongoose.isValidObjectId(req.params.productVariantId)) {
+       return res.status(400).send('Invalid ProductVariant Id')
+    }
+    //product variants update:
+
+        const updatedProductVariant = await ProductVariant.findByIdAndUpdate(
+            req.params.productVariantId,
+            {
+                description: req.body.description,
+                size: req.body.size,
+                colour: req.body.colour,
+                price: req.body.price,
+                countInStock: req.body.countInStock,
+                isFeatured: req.body.isFeatured,
+            },
+            { new: true}
+        )
+        console.log("updatedProductVariant: ",updatedProductVariant)
+        if(!updatedProductVariant)
+            return res.status(500).send('the productVariant cannot be updated!')
+
+    res.send(updatedProductVariant);
 })
 
 router.delete('/:id', (req, res)=>{
@@ -152,7 +199,7 @@ router.get(`/get/featured/:count`, async (req, res) =>{
 
 router.put(
     '/gallery-images/:id', 
-    uploadOptions.array('images', 10), 
+    uploadOptions("pvrd-products").array('images', 10), 
     async (req, res)=> {
         if(!mongoose.isValidObjectId(req.params.id)) {
             return res.status(400).send('Invalid Product Id')
@@ -163,7 +210,8 @@ router.put(
 
          if(files) {
             files.map(file =>{
-                imagesPaths.push(`${basePath}${file.filename}`);
+                //imagesPaths.push(`${basePath}${file.filename}`);
+                imagesPaths.push(file.location)
             })
          }
 

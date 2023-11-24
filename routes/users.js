@@ -80,40 +80,38 @@ router.post('/login', async (req,res) => {
     const user = await User.findOne({email: req.body.email})
     const secret = process.env.secret;
     if(!user) {
-        return res.status(400).send('The user not found');
+        return res.status(401).send('Wrong Credential!');
     }
 
     if(user && bcrypt.compareSync(req.body.password, user.passwordHash)) {
-        const token = jwt.sign(
-            {
-                userId: user.id,
-                isAdmin: user.isAdmin
-            },
-            secret,
-            {expiresIn : '1d'}
-        )
-       
-        res.status(200).send({user: user.email , token: token}) 
+        if(user.isActive === true){
+            const token = jwt.sign(
+                {
+                    userId: user.id,
+                    isAdmin: user.isAdmin
+                },
+                secret,
+                {expiresIn : '7d'}
+            )
+            res.status(200).send({user: user.email , token: token}) 
+        }
+        else{
+            res.status(403).send('Access Denied!');
+        }
+        
     } else {
-       res.status(400).send('password is wrong!');
+       res.status(401).send('Wrong Credential!');
     }
-
-    
 })
-
 
 router.post('/register', async (req,res)=>{
     let user = new User({
         name: req.body.name,
         email: req.body.email,
         passwordHash: bcrypt.hashSync(req.body.password, 10),
-        phone: req.body.phone,
         isAdmin: req.body.isAdmin,
-        street: req.body.street,
-        apartment: req.body.apartment,
-        zip: req.body.zip,
-        city: req.body.city,
-        country: req.body.country,
+        isActive: false,
+        addresses: [req.body.address]
     })
     user = await user.save();
 
@@ -123,6 +121,22 @@ router.post('/register', async (req,res)=>{
     res.send(user);
 })
 
+router.put('/approve/:id',async (req, res)=> {
+
+    const userExist = await User.findById(req.params.id);
+
+    const user = await User.findByIdAndUpdate(
+        req.params.id,
+        {
+            isActive: req.body.isActive,
+        }
+    )
+
+    if(!user)
+    return res.status(400).send('User is not found!')
+
+    res.send(user);
+})
 
 router.delete('/:id', (req, res)=>{
     User.findByIdAndRemove(req.params.id).then(user =>{

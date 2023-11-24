@@ -1,6 +1,41 @@
+const multer = require('multer');
+const aws = require("aws-sdk");
+const multerS3 = require("multer-s3");
 const {Category} = require('../models/category');
+const {Product} = require('../models/product');
 const express = require('express');
 const router = express.Router();
+
+const FILE_TYPE_MAP = {
+    'image/png': 'png',
+    'image/jpeg': 'jpeg',
+    'image/jpg': 'jpg'
+}
+
+const s3 = new aws.S3({
+    accessKeyId: process.env.S3_ACCESS_KEY,
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+    region: process.env.S3_BUCKET_REGION,
+});
+
+const uploadOptions = (bucketName) =>
+    multer({
+      storage: multerS3({
+        s3,
+        bucket: bucketName,
+        metadata: function (req, file, cb) {
+          cb(null, { fieldName: file.fieldname });
+        },
+        key: function (req, file, cb) {
+          cb(null, `image-${Date.now()}.jpeg`);
+        },
+        filename: function (req, file, cb) {
+            const fileName = file.originalname.split(' ').join('-');
+            const extension = FILE_TYPE_MAP[file.mimetype];
+            cb(null, `${fileName}-${Date.now()}.${extension}`)
+          }
+      }),
+});
 
 router.get(`/`, async (req, res) =>{
     const categoryList = await Category.find();
@@ -20,14 +55,25 @@ router.get('/:id', async(req,res)=>{
     res.status(200).send(category);
 })
 
+router.get(`/:categoryId/products`, async (req, res) =>{
+    const product = await Product.find({category:req.params.categoryId}).populate('category').populate('productVariants');
+
+    if(!product) {
+        res.status(500).json({success: false})
+    } 
+    res.send(product);
+})
 
 
-router.post('/', async (req,res)=>{
+router.post('/', uploadOptions("pvrd-products").single('image'), async (req,res)=>{
     let category = new Category({
         name: req.body.name,
-        icon: req.body.icon,
+        image: req.file.location,
         color: req.body.color
     })
+    const file = req.file;
+    if(!file) return res.status(400).send('No image in the request');
+
     category = await category.save();
 
     if(!category)
