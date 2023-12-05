@@ -2,9 +2,11 @@ const {Order} = require('../models/order');
 const express = require('express');
 const { OrderItem } = require('../models/order-item');
 const { User } = require('../models/user');
+const requestHelper = require('../helpers/request-helper');
 const router = express.Router();
 
 router.get(`/`, async (req, res) =>{
+    requestHelper(res);
     const orderList = await Order.find().populate('user', 'name').populate('orderItems').sort({'dateOrdered': -1});
 
     if(!orderList) {
