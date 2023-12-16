@@ -13,8 +13,8 @@ app.use(function(req, res, next) {
     next();
   });
 
-app.use(cors());
-app.options('*', cors())
+// app.use(cors());
+// app.options('*', cors())
 
 //middleware
 app.use(express.json());
