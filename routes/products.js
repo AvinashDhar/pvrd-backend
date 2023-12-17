@@ -78,6 +78,7 @@ router.post(`/`, uploadOptions("pvrd-products").single('image'), async (req, res
             size: productVariant.size,
             colour: productVariant.colour,
             price: productVariant.price,
+            rewardPoint: productVariant.rewardPoint,
             countInStock: productVariant.countInStock,
             isFeatured: productVariant.isFeatured,
         })

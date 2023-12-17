@@ -16,6 +16,10 @@ const productVariantSchema = mongoose.Schema({
         type: Number,
         default:0
     },
+    rewardPoint : {
+        type: Number,
+        default:0
+    },
     countInStock: {
         type: Number,
         default:10,
