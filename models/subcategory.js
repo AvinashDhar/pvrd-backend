@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const categorySchema = mongoose.Schema({
+const subCategorySchema = mongoose.Schema({
     name: {
         type: String,
         required: true,
@@ -9,19 +9,20 @@ const categorySchema = mongoose.Schema({
         type: String,
         default: ''
     },
-    subCategories: [{
+    Category: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'SubCategory'
-    }],
+        ref: 'Category',
+        required:true
+    },
 })
 
 
-categorySchema.virtual('id').get(function () {
+subCategorySchema.virtual('id').get(function () {
     return this._id.toHexString();
 });
 
-categorySchema.set('toJSON', {
+subCategorySchema.set('toJSON', {
     virtuals: true,
 });
 
-exports.Category = mongoose.model('Category', categorySchema);
+exports.SubCategory = mongoose.model('SubCategory', subCategorySchema);

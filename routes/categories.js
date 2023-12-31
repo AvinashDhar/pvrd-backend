@@ -38,7 +38,7 @@ const uploadOptions = (bucketName) =>
 });
 
 router.get(`/`, async (req, res) =>{
-    const categoryList = await Category.find();
+    const categoryList = await Category.find().populate('subCategories');
 
     if(!categoryList) {
         res.status(500).json({success: false})

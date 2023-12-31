@@ -12,6 +12,36 @@ const productSchema = mongoose.Schema({
         type: String,
         default: ''
     },
+    size: {
+        type: String,
+        default: ''
+    },
+    uom: {
+        type: String,
+        default: ''
+    },
+    colour: {
+        type: String,
+        default: ''
+    },
+    price : {
+        type: Number,
+        default:0
+    },
+    packingUnit: {
+        type: Number,
+        default: 1
+    },
+    rewardPoint : {
+        type: Number,
+        default:0
+    },
+    countInStock: {
+        type: Number,
+        default:10,
+        min: 0,
+        max: 1000
+    },
     image: {
         type: String,
         default: ''
@@ -27,6 +57,11 @@ const productSchema = mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Category',
         required:true
+    },
+    subCategory: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'SubCategory',
+        required:false
     },
     productVariants: [{
         type: mongoose.Schema.Types.ObjectId,

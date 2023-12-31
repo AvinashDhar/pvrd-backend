@@ -1,6 +1,7 @@
 const {Product} = require('../models/product');
 const express = require('express');
 const { Category } = require('../models/category');
+const  {SubCategory} = require('../models/subcategory');
 const router = express.Router();
 const mongoose = require('mongoose');
 const multer = require('multer');
@@ -47,7 +48,7 @@ router.get(`/`, async (req, res) =>{
          filter = {category: req.query.categories.split(',')}
     }
 
-    const productList = await Product.find(filter).populate('category').populate('productVariants');
+    const productList = await Product.find(filter).populate('category').populate('subCategory').populate('productVariants');
 
     if(!productList) {
         res.status(500).json({success: false})
@@ -56,7 +57,7 @@ router.get(`/`, async (req, res) =>{
 })
 
 router.get(`/:id`, async (req, res) =>{
-    const product = await Product.findById(req.params.id).populate('category');
+    const product = await Product.findById(req.params.id).populate('category').populate('subCategory');
 
     if(!product) {
         res.status(500).json({success: false})
@@ -66,18 +67,24 @@ router.get(`/:id`, async (req, res) =>{
 
 router.post(`/`, uploadOptions("pvrd-products").single('image'), async (req, res) =>{
     const category = await Category.findById(req.body.category);
-    if(!category) return res.status(400).send('Invalid Category')
+    if(!category) return res.status(400).send('Invalid Category');
+
+    if(req.body.subCategory){
+        const subCategory = await SubCategory.findById(req.body.subCategory);
+        if(!subCategory) return res.status(400).send('Invalid subCategory');
+    }
 
     const file = req.file;
-    if(!file) return res.status(400).send('No image in the request');
+    //if(!file) return res.status(400).send('No image in the request');
 
     //product variants creation:
     const productVariantIds = Promise.all(JSON.parse(req.body.productVariants)?.map(async (productVariant) =>{
         let newProductVariant = new ProductVariant({
-            description: productVariant.description,
             size: productVariant.size,
+            uom: productVariant.uom,
             colour: productVariant.colour,
             price: productVariant.price,
+            packingUnit: productVariant.packingUnit,
             rewardPoint: productVariant.rewardPoint,
             countInStock: productVariant.countInStock,
             isFeatured: productVariant.isFeatured,
@@ -93,9 +100,18 @@ router.post(`/`, uploadOptions("pvrd-products").single('image'), async (req, res
         name: req.body.name,
         description: req.body.description,
         richDescription: req.body.richDescription,
-        image: req.file.location,
+        size: req.body.size,
+        uom:req.body.uom,
+        colour: req.body.colour,
+        price: req.body.price,
+        packingUnit: req.body.packingUnit,
+        rewardPoint: req.body.rewardPoint,
+        countInStock: req.body.countInStock,
+        richDescription: req.body.richDescription,
+        image: req.file?.location,
         brand: req.body.brand,
         category: req.body.category,
+        subCategory: req.body.subCategory,
         productVariants: productVariantIdsResolved,
         rating: req.body.rating,
         numReviews: req.body.numReviews,
@@ -117,15 +133,28 @@ router.put('/:id',async (req, res)=> {
     const category = await Category.findById(req.body.category);
     if(!category) return res.status(400).send('Invalid Category');
 
+    if(req.body.subCategory){
+        const subCategory = await SubCategory.findById(req.body.subCategory);
+        if(!subCategory) return res.status(400).send('Invalid subCategory');
+    }
+
     const product = await Product.findByIdAndUpdate(
         req.params.id,
         {
             name: req.body.name,
             description: req.body.description,
             richDescription: req.body.richDescription,
+            size: req.body.size,
+            uom:req.body.uom,
+            colour: req.body.colour,
+            price: req.body.price,
+            packingUnit: req.body.packingUnit,
+            rewardPoint: req.body.rewardPoint,
+            countInStock: req.body.countInStock,
             image: req.body.image,
             brand: req.body.brand,
             category: req.body.category,
+            subCategory: req.body.subCategory,
             productVariant: req.body.productVariant,
             rating: req.body.rating,
             numReviews: req.body.numReviews,
@@ -149,10 +178,12 @@ router.put('/productVariants/:productVariantId',async (req, res)=> {
         const updatedProductVariant = await ProductVariant.findByIdAndUpdate(
             req.params.productVariantId,
             {
-                description: req.body.description,
                 size: req.body.size,
+                uom: req.body.uom,
                 colour: req.body.colour,
                 price: req.body.price,
+                packingUnit: req.body.packingUnit,
+                rewardPoint: req.body.rewardPoint,
                 countInStock: req.body.countInStock,
                 isFeatured: req.body.isFeatured,
             },
@@ -165,38 +196,38 @@ router.put('/productVariants/:productVariantId',async (req, res)=> {
     res.send(updatedProductVariant);
 })
 
-router.delete('/:id', (req, res)=>{
-    Product.findByIdAndRemove(req.params.id).then(product =>{
-        if(product) {
-            return res.status(200).json({success: true, message: 'the product is deleted!'})
-        } else {
-            return res.status(404).json({success: false , message: "product not found!"})
-        }
-    }).catch(err=>{
-       return res.status(500).json({success: false, error: err}) 
-    })
-})
+// router.delete('/:id', (req, res)=>{
+//     Product.findByIdAndRemove(req.params.id).then(product =>{
+//         if(product) {
+//             return res.status(200).json({success: true, message: 'the product is deleted!'})
+//         } else {
+//             return res.status(404).json({success: false , message: "product not found!"})
+//         }
+//     }).catch(err=>{
+//        return res.status(500).json({success: false, error: err}) 
+//     })
+// })
 
-router.get(`/get/count`, async (req, res) =>{
-    const productCount = await Product.countDocuments((count) => count)
+// router.get(`/get/count`, async (req, res) =>{
+//     const productCount = await Product.countDocuments((count) => count)
 
-    if(!productCount) {
-        res.status(500).json({success: false})
-    } 
-    res.send({
-        productCount: productCount
-    });
-})
+//     if(!productCount) {
+//         res.status(500).json({success: false})
+//     } 
+//     res.send({
+//         productCount: productCount
+//     });
+// })
 
-router.get(`/get/featured/:count`, async (req, res) =>{
-    const count = req.params.count ? req.params.count : 0
-    const products = await Product.find({isFeatured: true}).limit(+count);
+// router.get(`/get/featured/:count`, async (req, res) =>{
+//     const count = req.params.count ? req.params.count : 0
+//     const products = await Product.find({isFeatured: true}).limit(+count);
 
-    if(!products) {
-        res.status(500).json({success: false})
-    } 
-    res.send(products);
-})
+//     if(!products) {
+//         res.status(500).json({success: false})
+//     } 
+//     res.send(products);
+// })
 
 router.put(
     '/gallery-images/:id', 

@@ -1,10 +1,11 @@
 const mongoose = require('mongoose');
 
 const productVariantSchema = mongoose.Schema({
-    description: {
-        type: String
-    },
     size: {
+        type: String,
+        default: ''
+    },
+    uom: {
         type: String,
         default: ''
     },
@@ -15,6 +16,10 @@ const productVariantSchema = mongoose.Schema({
     price : {
         type: Number,
         default:0
+    },
+    packingUnit: {
+        type: Number,
+        default: 1
     },
     rewardPoint : {
         type: Number,
