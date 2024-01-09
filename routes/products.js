@@ -73,9 +73,11 @@ router.post(`/`, uploadOptions("pvrd-products").single('image'), async (req, res
         const subCategory = await SubCategory.findById(req.body.subCategory);
         if(!subCategory) return res.status(400).send('Invalid subCategory');
     }
-
+    const existingProduct = await Product.find({name:req.body.name, brand:req.body.brand});
+    if(existingProduct.length !== 0){
+        return res.status(500).send({error: "Product Name or Brand Name is not unique!"})
+    }
     const file = req.file;
-    //if(!file) return res.status(400).send('No image in the request');
 
     //product variants creation:
     const productVariantIds = Promise.all(JSON.parse(req.body.productVariants)?.map(async (productVariant) =>{
@@ -90,10 +92,15 @@ router.post(`/`, uploadOptions("pvrd-products").single('image'), async (req, res
             isFeatured: productVariant.isFeatured,
         })
 
-        newProductVariant = await newProductVariant.save();
-
-        return newProductVariant._id;
+        try {
+            newProductVariant = await newProductVariant.save();
+            return newProductVariant._id;
+        } catch (error) {
+            return res.status(500).send({error: error.message})
+        }
+        
     }))
+    
     const productVariantIdsResolved =  await productVariantIds;
 
     let product = new Product({
@@ -117,8 +124,11 @@ router.post(`/`, uploadOptions("pvrd-products").single('image'), async (req, res
         numReviews: req.body.numReviews,
         isFeatured: req.body.isFeatured,
     })
-
-    product = await product.save();
+    try {
+        product = await product.save();
+    } catch (error) {
+        return res.status(500).send({error: error.message})
+    }
 
     if(!product) 
     return res.status(500).send('The product cannot be created')
