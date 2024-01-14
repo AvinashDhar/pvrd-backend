@@ -25,6 +25,7 @@ app.use('/public/uploads', express.static(__dirname + '/public/uploads'));
 
 //Routes
 const categoriesRoutes = require('../routes/categories');
+const colourRoutes = require('../routes/colours');
 const subCategoriesRoutes = require('../routes/subCategories');
 const productsRoutes = require('../routes/products');
 const usersRoutes = require('../routes/users');
@@ -38,6 +39,7 @@ app.use(`${api}/products`, productsRoutes);
 app.use(`${api}/users`, usersRoutes);
 app.use(`${api}/orders`, ordersRoutes);
 app.use(`${api}/addresses`,addressRoutes);
+app.use(`${api}/colours`, colourRoutes);
 
 //Database
 mongoose.connect(process.env.CONNECTION_STRING, {
