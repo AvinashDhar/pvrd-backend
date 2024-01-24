@@ -48,7 +48,8 @@ router.get(`/`, async (req, res) =>{
          filter = {category: req.query.categories.split(',')}
     }
 
-    const productList = await Product.find(filter).populate('category').populate('subCategory').populate('productVariants');
+    const productList = await Product.find(filter).populate('category')
+    .populate('subCategory').populate('productVariants').populate('colour');
 
     if(!productList) {
         res.status(500).json({success: false})
@@ -57,7 +58,7 @@ router.get(`/`, async (req, res) =>{
 })
 
 router.get(`/:id`, async (req, res) =>{
-    const product = await Product.findById(req.params.id).populate('category').populate('subCategory');
+    const product = await Product.findById(req.params.id).populate('category').populate('subCategory').poplulate('colour');
 
     if(!product) {
         res.status(500).json({success: false})
@@ -136,10 +137,33 @@ router.post(`/`, uploadOptions("pvrd-products").single('image'), async (req, res
     res.send(product);
 })
 
-router.put('/:id',async (req, res)=> {
-    if(!mongoose.isValidObjectId(req.params.id)) {
-       return res.status(400).send('Invalid Product Id')
+router.put('/:productId', uploadOptions("pvrd-products").single('image'), async (req, res)=> {
+    if(!mongoose.isValidObjectId(req.params.productId)) {
+        return res.status(400).send('Invalid Product Id')
+     }
+    if(req.body?.removeImage) {
+        const product = await Product.findByIdAndUpdate(
+            req.params.productId,
+            {
+                image: ''
+            },
+            { new: true}
+        );
+        return res.send(product);
+
     }
+    if(req.body?.removeImages) {
+        const product = await Product.findByIdAndUpdate(
+            req.params.productId,
+            {
+                images: []
+            },
+            { new: true}
+        );
+        return res.send(product);
+
+    }
+    
     const category = await Category.findById(req.body.category);
     if(!category) return res.status(400).send('Invalid Category');
 
@@ -147,9 +171,53 @@ router.put('/:id',async (req, res)=> {
         const subCategory = await SubCategory.findById(req.body.subCategory);
         if(!subCategory) return res.status(400).send('Invalid subCategory');
     }
+    let productVariantIdsResolved = [];
+    if(req.body.productVariants){
+        const productVariantIds = Promise.all(JSON.parse(req.body.productVariants)?.map(async (productVariant) =>{    
+            try {
+                const productVariantInDb = await ProductVariant.findById(productVariant.id);
+                if(!productVariantInDb) {
+                    let newProductVariant = new ProductVariant({
+                        size: productVariant.size,
+                        uom: productVariant.uom,
+                        colour: productVariant.colour,
+                        price: productVariant.price,
+                        packingUnit: productVariant.packingUnit,
+                        rewardPoint: productVariant.rewardPoint,
+                        countInStock: productVariant.countInStock,
+                        isFeatured: productVariant.isFeatured,
+                    });
+                    newProductVariant = await newProductVariant.save();
+                    return newProductVariant._id;
+                }
+
+                let updatedProductVariant = await ProductVariant.findByIdAndUpdate(
+                    productVariant.id,
+                    {
+                        size: productVariant.size,
+                        uom: productVariant.uom,
+                        colour: productVariant.colour,
+                        price: productVariant.price,
+                        packingUnit: productVariant.packingUnit,
+                        rewardPoint: productVariant.rewardPoint,
+                        countInStock: productVariant.countInStock,
+                        isFeatured: productVariant.isFeatured,
+                    },
+                    { new: true}
+                )
+                return updatedProductVariant?._id;
+
+            } catch (error) {
+                return res.status(500).send({error: error.message})
+            }
+            
+        }));
+        productVariantIdsResolved =  await productVariantIds;
+    }
+    console.log("productVariantIdsResolved ",productVariantIdsResolved)
 
     const product = await Product.findByIdAndUpdate(
-        req.params.id,
+        req.params.productId,
         {
             name: req.body.name,
             description: req.body.description,
@@ -161,11 +229,11 @@ router.put('/:id',async (req, res)=> {
             packingUnit: req.body.packingUnit,
             rewardPoint: req.body.rewardPoint,
             countInStock: req.body.countInStock,
-            image: req.body.image,
+            image: req.file?.location,
             brand: req.body.brand,
             category: req.body.category,
             subCategory: req.body.subCategory,
-            productVariant: req.body.productVariant,
+            productVariants: productVariantIdsResolved,
             rating: req.body.rating,
             numReviews: req.body.numReviews,
             isFeatured: req.body.isFeatured,
@@ -218,27 +286,6 @@ router.delete('/:id', (req, res)=>{
     })
 })
 
-// router.get(`/get/count`, async (req, res) =>{
-//     const productCount = await Product.countDocuments((count) => count)
-
-//     if(!productCount) {
-//         res.status(500).json({success: false})
-//     } 
-//     res.send({
-//         productCount: productCount
-//     });
-// })
-
-// router.get(`/get/featured/:count`, async (req, res) =>{
-//     const count = req.params.count ? req.params.count : 0
-//     const products = await Product.find({isFeatured: true}).limit(+count);
-
-//     if(!products) {
-//         res.status(500).json({success: false})
-//     } 
-//     res.send(products);
-// })
-
 router.put(
     '/gallery-images/:id', 
     uploadOptions("pvrd-products").array('images', 10), 
@@ -248,7 +295,7 @@ router.put(
          }
          const files = req.files
          let imagesPaths = [];
-         const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`;
+         //const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`;
 
          if(files) {
             files.map(file =>{
@@ -273,3 +320,28 @@ router.put(
 )
 
 module.exports =router;
+
+
+
+
+
+// router.get(`/get/count`, async (req, res) =>{
+//     const productCount = await Product.countDocuments((count) => count)
+
+//     if(!productCount) {
+//         res.status(500).json({success: false})
+//     } 
+//     res.send({
+//         productCount: productCount
+//     });
+// })
+
+// router.get(`/get/featured/:count`, async (req, res) =>{
+//     const count = req.params.count ? req.params.count : 0
+//     const products = await Product.find({isFeatured: true}).limit(+count);
+
+//     if(!products) {
+//         res.status(500).json({success: false})
+//     } 
+//     res.send(products);
+// })

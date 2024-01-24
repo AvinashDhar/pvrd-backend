@@ -21,8 +21,9 @@ const productSchema = mongoose.Schema({
         default: ''
     },
     colour: {
-        type: String,
-        default: ''
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Colour',
+        default: '',
     },
     price : {
         type: Number,
