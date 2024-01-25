@@ -97,7 +97,7 @@ router.post(`/`, uploadOptions("pvrd-products").single('image'), async (req, res
             newProductVariant = await newProductVariant.save();
             return newProductVariant._id;
         } catch (error) {
-            return res.status(500).send({error: error.message})
+            return res.status(500).send({message:"error while creating product variants",error: error.message})
         }
         
     }))
@@ -128,11 +128,13 @@ router.post(`/`, uploadOptions("pvrd-products").single('image'), async (req, res
     try {
         product = await product.save();
     } catch (error) {
-        return res.status(500).send({error: error.message})
+        return res.status(500).send({message:"error while creating product",error: error.message})
     }
 
-    if(!product) 
-    return res.status(500).send('The product cannot be created')
+    if(!product) {
+        return res.status(500).send('The product cannot be created')
+    }
+    
 
     res.send(product);
 })
@@ -214,7 +216,6 @@ router.put('/:productId', uploadOptions("pvrd-products").single('image'), async 
         }));
         productVariantIdsResolved =  await productVariantIds;
     }
-    console.log("productVariantIdsResolved ",productVariantIdsResolved)
 
     const product = await Product.findByIdAndUpdate(
         req.params.productId,
@@ -267,7 +268,6 @@ router.put('/productVariants/:productVariantId',async (req, res)=> {
             },
             { new: true}
         )
-        console.log("updatedProductVariant: ",updatedProductVariant)
         if(!updatedProductVariant)
             return res.status(500).send('the productVariant cannot be updated!')
 
