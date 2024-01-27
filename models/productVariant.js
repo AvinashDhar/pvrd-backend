@@ -2,16 +2,19 @@ const mongoose = require('mongoose');
 
 const productVariantSchema = mongoose.Schema({
     size: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Size',
         default: ''
     },
     uom: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'UoM',
         default: ''
     },
     colour: {
-        type: String,
-        default: ''
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Colour',
+        default: '',
     },
     price : {
         type: Number,

@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
 
 router.get(`/`, async (req, res) =>{
     const userList = await User.find().select('-passwordHash');
@@ -76,9 +77,10 @@ router.put('/:id',async (req, res)=> {
     res.send(user);
 })
 
-router.post('/login', async (req,res) => {
-    const user = await User.findOne({email: req.body.email})
+router.post('/login',multer().none(), async (req,res) => {
+    const user = await User.findOne({email: req.body.email});
     const secret = process.env.secret;
+    console.log("====================",req.body)
     if(!user) {
         return res.status(401).send('Wrong Credential!');
     }

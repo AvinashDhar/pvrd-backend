@@ -6,24 +6,27 @@ const productSchema = mongoose.Schema({
         required: true,
     },
     description: {
-        type: String
+        type: String,
+        default: ''
     },
     richDescription: {
         type: String,
         default: ''
     },
     size: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Size',
         default: ''
     },
     uom: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'UoM',
         default: ''
     },
     colour: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Colour',
-        default: '',
+        default: ''
     },
     price : {
         type: Number,
@@ -51,8 +54,9 @@ const productSchema = mongoose.Schema({
         type: String
     }],
     brand: {
-        type: String,
-        default: ''
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Brand',
+        default: '',
     },
     category: {
         type: mongoose.Schema.Types.ObjectId,
