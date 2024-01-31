@@ -26,10 +26,13 @@ router.post('/', getFields.none(), async (req,res)=>{
     let uom = new UoM({
         name: req.body.name
     });
-    uom = await uom.save();
+    try {
+        uom = await uom.save();
+    } catch (error) {
+        return res.status(400).send(error)
+    }
     if(!uom)
-    return res.status(400).send('the uom cannot be created!')
-
+        return res.status(400).send('the uom cannot be created!')
     res.send(uom);
 })
 

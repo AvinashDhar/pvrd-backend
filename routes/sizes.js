@@ -26,10 +26,13 @@ router.post('/', getFields.none(), async (req,res)=>{
     let size = new Size({
         name: req.body.name
     });
-    size = await size.save();
+    try {
+        size = await size.save();
+    } catch (error) {
+        return res.status(400).send(error)
+    }
     if(!size)
-    return res.status(400).send('the size cannot be created!')
-
+        return res.status(400).send('the size cannot be created!')
     res.send(size);
 })
 

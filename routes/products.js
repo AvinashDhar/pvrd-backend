@@ -21,6 +21,8 @@ const s3 = new aws.S3({
     region: process.env.S3_BUCKET_REGION,
 });
 
+const bucketStage = process.env.S3_BUCKET_STAGE;
+
 const uploadOptions = (bucketName) =>
     multer({
       storage: multerS3({
@@ -66,7 +68,7 @@ router.get(`/:id`, async (req, res) =>{
     res.send(product);
 })
 
-router.post(`/`, uploadOptions("pvrd-products").single('image'), async (req, res) =>{
+router.post(`/`, uploadOptions(`pvrd-${bucketStage}-products`).single('image'), async (req, res) =>{
     const category = await Category.findById(req.body.category);
     if(!category) return res.status(400).send('Invalid Category');
 
@@ -139,7 +141,7 @@ router.post(`/`, uploadOptions("pvrd-products").single('image'), async (req, res
     res.send(product);
 })
 
-router.put('/:productId', uploadOptions("pvrd-products").single('image'), async (req, res)=> {
+router.put('/:productId', uploadOptions(`pvrd-${bucketStage}-products`).single('image'), async (req, res)=> {
     if(!mongoose.isValidObjectId(req.params.productId)) {
         return res.status(400).send('Invalid Product Id')
      }
@@ -288,7 +290,7 @@ router.delete('/:id', (req, res)=>{
 
 router.put(
     '/gallery-images/:id', 
-    uploadOptions("pvrd-products").array('images', 10), 
+    uploadOptions(`pvrd-${bucketStage}-products`).array('images', 10), 
     async (req, res)=> {
         if(!mongoose.isValidObjectId(req.params.id)) {
             return res.status(400).send('Invalid Product Id')

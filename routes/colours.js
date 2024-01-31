@@ -18,24 +18,29 @@ const s3 = new aws.S3({
     region: process.env.S3_BUCKET_REGION,
 });
 
-const uploadOptions = (bucketName) =>
-    multer({
-      storage: multerS3({
-        s3,
-        bucket: bucketName,
-        metadata: function (req, file, cb) {
-          cb(null, { fieldName: file.fieldname });
-        },
-        key: function (req, file, cb) {
-          cb(null, `image-${Date.now()}.jpeg`);
-        },
-        filename: function (req, file, cb) {
-            const fileName = file.originalname.split(' ').join('-');
-            const extension = FILE_TYPE_MAP[file.mimetype];
-            cb(null, `${fileName}-${Date.now()}.${extension}`)
-          }
-      }),
-});
+const bucketStage = process.env.S3_BUCKET_STAGE;
+const bucketName = `pvrd-${bucketStage}-colours`
+const uploadOptions = (bucketName) => {
+    console.log("=============bucketName=============",bucketName)
+    return multer({
+        storage: multerS3({
+          s3,
+          bucket: bucketName,
+          metadata: function (req, file, cb) {
+            cb(null, { fieldName: file.fieldname });
+          },
+          key: function (req, file, cb) {
+            cb(null, `image-${Date.now()}.jpeg`);
+          },
+          filename: function (req, file, cb) {
+              const fileName = file.originalname.split(' ').join('-');
+              const extension = FILE_TYPE_MAP[file.mimetype];
+              cb(null, `${fileName}-${Date.now()}.${extension}`)
+            }
+        }),
+  });
+}
+
 
 router.get(`/`, async (req, res) =>{
     const colourList = await Colour.find();
@@ -65,20 +70,18 @@ router.get('/:id', async(req,res)=>{
 // })
 
 
-router.post('/', uploadOptions("pvrd-products").single('image'), async (req,res)=>{
+router.post('/', uploadOptions(bucketName).single('image'), async (req,res)=>{
     let colour = new Colour({
         name: req.body.name,
-        image: req.file.location,
-        color: req.body.color
+        image: req.file?.location,
     })
-    const file = req.file;
-    if(!file) return res.status(400).send('No image in the request');
-
-    colour = await colour.save();
-
+    try {
+        colour = await colour.save(); 
+    } catch (error) {
+        return res.status(400).send(error) 
+    }
     if(!colour)
-    return res.status(400).send('the colour cannot be created!')
-
+        return res.status(400).send('the colour cannot be created!')
     res.send(colour);
 })
 
