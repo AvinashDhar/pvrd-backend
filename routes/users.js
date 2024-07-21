@@ -77,34 +77,34 @@ router.put('/:id',async (req, res)=> {
     res.send(user);
 })
 
-router.post('/login',multer().none(), async (req,res) => {
-    const user = await User.findOne({email: req.body.email});
-    const secret = process.env.secret;
-    console.log("====================",req.body)
-    if(!user) {
-        return res.status(401).send('Wrong Credential!');
-    }
+// router.post('/login',multer().none(), async (req,res) => {
+//     const user = await User.findOne({email: req.body.email});
+//     const secret = process.env.SECRET;
+//     console.log("====================",req.body)
+//     if(!user) {
+//         return res.status(401).send('Wrong Credential!');
+//     }
 
-    if(user && bcrypt.compareSync(req.body.password, user.passwordHash)) {
-        if(user.isActive === true){
-            const token = jwt.sign(
-                {
-                    userId: user.id,
-                    isAdmin: user.isAdmin
-                },
-                secret,
-                {expiresIn : '7d'}
-            )
-            res.status(200).send({user: user.email , token: token}) 
-        }
-        else{
-            res.status(403).send('Access Denied!');
-        }
+//     if(user && bcrypt.compareSync(req.body.password, user.passwordHash)) {
+//         if(user.isActive === true){
+//             const token = jwt.sign(
+//                 {
+//                     userId: user.id,
+//                     isAdmin: user.isAdmin
+//                 },
+//                 secret,
+//                 {expiresIn : '7d'}
+//             )
+//             res.status(200).send({user: user.email , token: token}) 
+//         }
+//         else{
+//             res.status(403).send('Access Denied!');
+//         }
         
-    } else {
-       res.status(401).send('Wrong Credential!');
-    }
-})
+//     } else {
+//        res.status(401).send('Wrong Credential!');
+//     }
+// })
 
 router.post('/register', async (req,res)=>{
     let user = new User({

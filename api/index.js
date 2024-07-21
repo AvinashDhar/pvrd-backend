@@ -4,7 +4,7 @@ const morgan = require('morgan');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv/config');
-const authJwt = require('../helpers/jwt');
+const { authenticationRoutes, verify } = require('../helpers/authentication');
 const errorHandler = require('../helpers/error-handler');
 
 app.use(cors());
@@ -30,10 +30,12 @@ const ordersRoutes = require('../routes/orders');
 const addressRoutes = require('../routes/address');
 
 const api = process.env.API_URL;
+app.use(`${api}/user`, authenticationRoutes);
+//app.use(`${api}/categories`, verify, categoriesRoutes);
 app.use(`${api}/categories`, categoriesRoutes);
 app.use(`${api}/subCategories`, subCategoriesRoutes);
 app.use(`${api}/products`, productsRoutes);
-app.use(`${api}/users`, usersRoutes);
+//app.use(`${api}/users`, usersRoutes);
 app.use(`${api}/orders`, ordersRoutes);
 app.use(`${api}/addresses`,addressRoutes);
 app.use(`${api}/colours`, colourRoutes);
@@ -60,9 +62,9 @@ mongoose.connect(process.env.CONNECTION_STRING, {
 //     console.log('server is running http://localhost:8000');
 // })
 
-// const port = process.env.PORT || 8000;
-// app.listen(port, () => {
-//   console.log(`App running on port ${port}...`);
-// });
+const port = process.env.PORT || 8000;
+app.listen(port, () => {
+  console.log(`App running on port ${port}...`);
+});
 
-module.exports = app;
+//module.exports = app;
